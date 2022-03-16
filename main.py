@@ -2,10 +2,14 @@ import sys
 import os
 import ntpath
 import shutil
+import zipfile
 import re
 from os import path
+import pandas as pd
 from PySide6 import QtCore, QtWidgets, QtGui
+from datetime import date
 from PySide6.QtWidgets import  QPushButton, QLabel, QVBoxLayout, QHBoxLayout, QLineEdit, QMessageBox, QFileDialog, QProgressBar
+
 
 DEBUG = True
 
@@ -49,6 +53,7 @@ class OrganizerApp(QtWidgets.QWidget):
         self.sourceButton.clicked.connect(self.sourcebuttonClicked)
         self.destinationButton.clicked.connect(self.destinationbuttonClicked)
 
+    @QtCore.Slot()
     def runOrganizer(self):
         print("running organizer")
         sourcefilespath = self.sourceLineEdit.text()
@@ -56,19 +61,31 @@ class OrganizerApp(QtWidgets.QWidget):
         filepathList = []
         filenameList = []
         result = []
+        excelData = []
+
+        excelData.append(["Source","Destination"])
 
         filecount = 0
         progresscount = 0
         self.progressBar.setValue(0)
+
+        # loop for unzipping files
+        for r, d, f in os.walk(sourcefilespath):
+            for file in f:
+                if ".zip" in file:
+                    folderPath = os.path.dirname(os.path.abspath(os.path.join(r, file)))
+                    with zipfile.ZipFile(os.path.join(r, file), 'r') as zip_ref:
+                        zip_ref.extractall(folderPath)
+
         # r=root, d=directories, f = files
         for r, d, f in os.walk(sourcefilespath):
             for file in f:
-                filepathList.append(os.path.join(r, file))
-                filenameList.append(ntpath.basename(os.path.join(r, file)))
-                result.append([ntpath.basename(os.path.join(r, file)), os.path.join(r, file) ])
-                filecount = filecount + 1
+                if not ".zip" in file:
+                    filepathList.append(os.path.join(r, file))
+                    filenameList.append(ntpath.basename(os.path.join(r, file)))
+                    result.append([ntpath.basename(os.path.join(r, file)), os.path.join(r, file) ])
+                    filecount = filecount + 1
 
-        log(filenameList)
         fileDictionary = dict(result)
         for file in filenameList:
             if re.search("^[0-9]{2}-[0-9]{2}",file):
@@ -78,6 +95,7 @@ class OrganizerApp(QtWidgets.QWidget):
                     os.makedirs(destinationfilespath + "\\" + newfolder)
                 shutil.copy2(fileDictionary[file], destinationfilespath + "\\" + newfolder)
                 progresscount = progresscount + 1
+                excelData.append([fileDictionary[file], destinationfilespath + "\\" + newfolder])
                 self.progressBar.setValue((progresscount/filecount)*100)
             elif re.search("^[A-Z]{1}\+[A-Z]{1}\-",file):
                 value = re.search("^[A-Z]{1}\+[A-Z]{1}\-", file)
@@ -89,6 +107,7 @@ class OrganizerApp(QtWidgets.QWidget):
                 if not os.path.exists(destinationfilespath + "\\" + newfolder + "\\" + subfolder):
                     os.makedirs(destinationfilespath + "\\" + newfolder + "\\" + subfolder)
                 shutil.copy2(fileDictionary[file], destinationfilespath + "\\" + newfolder + "\\" + subfolder)
+                excelData.append([fileDictionary[file], destinationfilespath + "\\" + newfolder + "\\" + subfolder])
                 progresscount = progresscount + 1
                 self.progressBar.setValue((progresscount / filecount) * 100)
             elif re.search("[A-Z]{2}-[0-9]{2}-[0-9]{2}",file):
@@ -97,42 +116,156 @@ class OrganizerApp(QtWidgets.QWidget):
                 mod_string = re.sub("[A-Z]{2}-", '', newfolder)
                 if not os.path.exists(destinationfilespath + "\\" + mod_string):
                     os.makedirs(destinationfilespath + "\\" + mod_string)
-
+                excelData.append([fileDictionary[file], destinationfilespath + "\\" + newfolder])
                 shutil.copy2(fileDictionary[file], destinationfilespath + "\\" + mod_string)
                 progresscount = progresscount + 1
                 self.progressBar.setValue((progresscount / filecount) * 100)
-            elif re.search("FAN",file):
-                value = re.search("FAN", file)
+            elif re.search("^FAN",file):
+                value = re.search("^FAN", file)
                 newfolder = value.group()
                 if not os.path.exists(destinationfilespath + "\\" + newfolder):
                     os.makedirs(destinationfilespath + "\\" + newfolder)
-
+                excelData.append([fileDictionary[file], destinationfilespath + "\\" + newfolder])
                 shutil.copy2(fileDictionary[file], destinationfilespath + "\\" + newfolder)
                 progresscount = progresscount + 1
                 self.progressBar.setValue((progresscount / filecount) * 100)
-            elif re.search("ABCD",file):
-                value = re.search("ABCD", file)
+            elif re.search("^ABCD",file):
+                value = re.search("^ABCD", file)
                 newfolder = value.group()
                 if not os.path.exists(destinationfilespath + "\\" + newfolder):
                     os.makedirs(destinationfilespath + "\\" + newfolder)
-
+                excelData.append([fileDictionary[file], destinationfilespath + "\\" + newfolder])
+                shutil.copy2(fileDictionary[file], destinationfilespath + "\\" + newfolder)
+                progresscount = progresscount + 1
+                self.progressBar.setValue((progresscount / filecount) * 100)
+            elif re.search("^CASA",file):
+                value = re.search("^CASA", file)
+                newfolder = value.group()
+                if not os.path.exists(destinationfilespath + "\\" + newfolder):
+                    os.makedirs(destinationfilespath + "\\" + newfolder)
+                excelData.append([fileDictionary[file], destinationfilespath + "\\" + newfolder])
+                shutil.copy2(fileDictionary[file], destinationfilespath + "\\" + newfolder)
+                progresscount = progresscount + 1
+                self.progressBar.setValue((progresscount / filecount) * 100)
+            elif re.search("^DTS",file):
+                value = re.search("^DTS", file)
+                newfolder = value.group()
+                if not os.path.exists(destinationfilespath + "\\" + newfolder):
+                    os.makedirs(destinationfilespath + "\\" + newfolder)
+                excelData.append([fileDictionary[file], destinationfilespath + "\\" + newfolder])
+                shutil.copy2(fileDictionary[file], destinationfilespath + "\\" + newfolder)
+                progresscount = progresscount + 1
+                self.progressBar.setValue((progresscount / filecount) * 100)
+            elif re.search("^FI",file):
+                value = re.search("^FI", file)
+                newfolder = value.group()
+                if not os.path.exists(destinationfilespath + "\\" + newfolder):
+                    os.makedirs(destinationfilespath + "\\" + newfolder)
+                excelData.append([fileDictionary[file], destinationfilespath + "\\" + newfolder])
+                shutil.copy2(fileDictionary[file], destinationfilespath + "\\" + newfolder)
+                progresscount = progresscount + 1
+                self.progressBar.setValue((progresscount / filecount) * 100)
+            elif re.search("^IT",file):
+                value = re.search("^IT", file)
+                newfolder = value.group()
+                if not os.path.exists(destinationfilespath + "\\" + newfolder):
+                    os.makedirs(destinationfilespath + "\\" + newfolder)
+                excelData.append([fileDictionary[file], destinationfilespath + "\\" + newfolder])
+                shutil.copy2(fileDictionary[file], destinationfilespath + "\\" + newfolder)
+                progresscount = progresscount + 1
+                self.progressBar.setValue((progresscount / filecount) * 100)
+            elif re.search("^IV",file):
+                value = re.search("^IV", file)
+                newfolder = value.group()
+                if not os.path.exists(destinationfilespath + "\\" + newfolder):
+                    os.makedirs(destinationfilespath + "\\" + newfolder)
+                excelData.append([fileDictionary[file], destinationfilespath + "\\" + newfolder])
+                shutil.copy2(fileDictionary[file], destinationfilespath + "\\" + newfolder)
+                progresscount = progresscount + 1
+                self.progressBar.setValue((progresscount / filecount) * 100)
+            elif re.search("^MC",file):
+                value = re.search("^MC", file)
+                newfolder = value.group()
+                if not os.path.exists(destinationfilespath + "\\" + newfolder):
+                    os.makedirs(destinationfilespath + "\\" + newfolder)
+                excelData.append([fileDictionary[file], destinationfilespath + "\\" + newfolder])
+                shutil.copy2(fileDictionary[file], destinationfilespath + "\\" + newfolder)
+                progresscount = progresscount + 1
+                self.progressBar.setValue((progresscount / filecount) * 100)
+            elif re.search("^NT",file):
+                value = re.search("^NT", file)
+                newfolder = value.group()
+                if not os.path.exists(destinationfilespath + "\\" + newfolder):
+                    os.makedirs(destinationfilespath + "\\" + newfolder)
+                excelData.append([fileDictionary[file], destinationfilespath + "\\" + newfolder])
+                shutil.copy2(fileDictionary[file], destinationfilespath + "\\" + newfolder)
+                progresscount = progresscount + 1
+                self.progressBar.setValue((progresscount / filecount) * 100)
+            elif re.search("^MP",file):
+                value = re.search("^MP", file)
+                newfolder = value.group()
+                if not os.path.exists(destinationfilespath + "\\" + newfolder):
+                    os.makedirs(destinationfilespath + "\\" + newfolder)
+                excelData.append([fileDictionary[file], destinationfilespath + "\\" + newfolder])
+                shutil.copy2(fileDictionary[file], destinationfilespath + "\\" + newfolder)
+                progresscount = progresscount + 1
+                self.progressBar.setValue((progresscount / filecount) * 100)
+            elif re.search("^PG",file):
+                value = re.search("^PG", file)
+                newfolder = value.group()
+                if not os.path.exists(destinationfilespath + "\\" + newfolder):
+                    os.makedirs(destinationfilespath + "\\" + newfolder)
+                excelData.append([fileDictionary[file], destinationfilespath + "\\" + newfolder])
+                shutil.copy2(fileDictionary[file], destinationfilespath + "\\" + newfolder)
+                progresscount = progresscount + 1
+                self.progressBar.setValue((progresscount / filecount) * 100)
+            elif re.search("^TT",file):
+                value = re.search("^TT", file)
+                newfolder = value.group()
+                if not os.path.exists(destinationfilespath + "\\" + newfolder):
+                    os.makedirs(destinationfilespath + "\\" + newfolder)
+                excelData.append([fileDictionary[file], destinationfilespath + "\\" + newfolder])
+                shutil.copy2(fileDictionary[file], destinationfilespath + "\\" + newfolder)
+                progresscount = progresscount + 1
+                self.progressBar.setValue((progresscount / filecount) * 100)
+            elif re.search("^ING",file):
+                value = re.search("^ING", file)
+                newfolder = value.group()
+                if not os.path.exists(destinationfilespath + "\\" + newfolder):
+                    os.makedirs(destinationfilespath + "\\" + newfolder)
+                excelData.append([fileDictionary[file], destinationfilespath + "\\" + newfolder])
+                shutil.copy2(fileDictionary[file], destinationfilespath + "\\" + newfolder)
+                progresscount = progresscount + 1
+                self.progressBar.setValue((progresscount / filecount) * 100)
+            elif re.search("^CAN",file):
+                value = re.search("^CAN", file)
+                newfolder = value.group()
+                if not os.path.exists(destinationfilespath + "\\" + newfolder):
+                    os.makedirs(destinationfilespath + "\\" + newfolder)
+                excelData.append([fileDictionary[file], destinationfilespath + "\\" + newfolder])
+                shutil.copy2(fileDictionary[file], destinationfilespath + "\\" + newfolder)
+                progresscount = progresscount + 1
+                self.progressBar.setValue((progresscount / filecount) * 100)
+            elif re.search("^BDU",file):
+                value = re.search("^BDU", file)
+                newfolder = value.group()
+                if not os.path.exists(destinationfilespath + "\\" + newfolder):
+                    os.makedirs(destinationfilespath + "\\" + newfolder)
+                excelData.append([fileDictionary[file], destinationfilespath + "\\" + newfolder])
                 shutil.copy2(fileDictionary[file], destinationfilespath + "\\" + newfolder)
                 progresscount = progresscount + 1
                 self.progressBar.setValue((progresscount / filecount) * 100)
             else:
                 newfolder = "Miscellaneous"
-                print(file)
                 if not os.path.exists(destinationfilespath + "\\" + newfolder):
                     os.makedirs(destinationfilespath + "\\" + newfolder)
                 shutil.copy2(fileDictionary[file], destinationfilespath + "\\" + newfolder)
+                excelData.append([fileDictionary[file], destinationfilespath + "\\" + newfolder])
                 progresscount = progresscount + 1
                 self.progressBar.setValue((progresscount / filecount) * 100)
-
-
-
-
-
-
+        self.runButton.setEnabled(True)
+        today = date.today()
+        pd.DataFrame(excelData).to_excel(destinationfilespath + "\\" +'output_metadata_' + today.strftime("%b-%d-%Y") + '.xlsx', header=False, index=False)
         log("Total file count: " + str(filecount))
 
     @QtCore.Slot()
@@ -155,7 +288,13 @@ class OrganizerApp(QtWidgets.QWidget):
             msg.setStandardButtons(QMessageBox.Ok)
             msg.exec()
             return
+        self.runButton.setEnabled(False)
         self.runOrganizer()
+        msg.setText("Export Completed!!!!!")
+        msg.setWindowTitle("Info")
+        msg.setStandardButtons(QMessageBox.Ok)
+        msg.exec()
+
 
     def sourcebuttonClicked(self):
         sourcefilespath = str(QFileDialog.getExistingDirectory(self, "Select Directory"))
@@ -164,7 +303,6 @@ class OrganizerApp(QtWidgets.QWidget):
     def destinationbuttonClicked(self):
         destinationfilespath = str(QFileDialog.getExistingDirectory(self, "Select Directory"))
         self.destinationLineEdit.setText(destinationfilespath)
-
 
 
 if __name__ == "__main__":
